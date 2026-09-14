@@ -502,22 +502,38 @@ let notes = [];
 async function loadMidi() {
     const file = document.getElementById("midiInput").files[0];
 
+    var buffer;
+
+    // open file or option
     if (!file) {
-        alert("Please select a MIDI file.");
-        return;
+        const url = document.getElementById("midiSelect").value;
+        const response = await fetch(url);
+        buffer = await response.arrayBuffer();
+    } else {
+        buffer = await file.arrayBuffer();
     }
 
-    const buffer = await file.arrayBuffer();
+    // get information
     const midi = new Midi(buffer);
+    
+    const duration = Math.floor(midi.duration);
+    const minutes = Math.floor(duration/60);
+    const seconds = duration%60;
 
-    console.log("Duration:", midi.duration);
+    document.getElementById("duration").innerHTML = minutes === 0 ? `${seconds} seconds` : `${minutes} minutes & ${seconds} seconds`;
+
+    let totalNotes = 0;
+    midi.tracks.forEach((track, i) => {
+        totalNotes += track.notes.length;
+    });
+    document.getElementById("notes").innerHTML = totalNotes;
 
     notes = [];
 
     midi.tracks.forEach(track => {
         track.notes.forEach(note => {
             notes.push([note.time, 1, note.midi, note.velocity]);
-            notes.push([note.time + note.duration, 0, note.midi]);
+            notes.push([note.time+note.duration, 0, note.midi]);
         });
     });
 
@@ -573,7 +589,7 @@ function tryStart() {
 
 let audioReady = false;
 document.getElementById("loadMidi").addEventListener("click", async () => {
-    await Tone.start();   // Safe to call multiple times
+    await Tone.start();   // safe to call multiple times
     audioReady = true;
 
     await loadMidi();
